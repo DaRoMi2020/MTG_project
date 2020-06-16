@@ -1,5 +1,7 @@
 --Main branch of the enchantment function
 
+--testing commit 2
+
 CREATE FUNCTION enchantment_function (
 	enchantments_limit_v integer, 
 	enchantments_rarity_v em_rarity,
