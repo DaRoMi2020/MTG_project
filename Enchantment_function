@@ -1,7 +1,5 @@
 --Main branch of the enchantment function
 
---testing commit 2
-
 CREATE FUNCTION enchantment_function (
 	enchantments_limit_v integer, 
 	enchantments_rarity_v em_rarity,
@@ -9,7 +7,8 @@ CREATE FUNCTION enchantment_function (
 	status_v em_status, 
 	color_v TEXT,
 	enchantments_types_v TEXT,
-	enchantments_sub_types_v TEXT DEFAULT NULL, 
+	enchantments_sub_exclude TEXT DEFAULT NULL,
+	enchantments_sub_include TEXT DEFAULT NULL,
 	enchantments_super_types_v TEXT DEFAULT NULL)
 
 
@@ -53,8 +52,10 @@ cards.rarity = enchantments_rarity_v::em_rarity AND
 cards.types::TEXT ILIKE enchantments_types_v::TEXT AND
 cards.types::TEXT NOT ILIKE '%Land%' AND
 cards.types::TEXT NOT ILIKE '%Creature%' AND
-(cards.subtypes::TEXT IS NULL OR cards.subtypes::TEXT ILIKE enchantments_sub_types_v::TEXT) AND
-(cards.supertypes::TEXT IS NULL OR cards.supertypes::TEXT ILIKE enchantments_super_types_v::TEXT) AND
+((enchantments_sub_exclude IS NULL AND cards.subtypes IS NULL) OR 
+	(enchantments_sub_exclude IS NOT NULL AND cards.subtypes::TEXT ILIKE enchantments_sub_include) OR 
+	(enchantments_sub_exclude IS NULL OR cards.subtypes::TEXT ILIKE enchantments_sub_include)) AND
+(enchantments_super_types_v IS NULL OR cards.supertypes::TEXT ILIKE enchantments_super_types_v::TEXT) AND
 legalities.format = format_v::em_format AND 
 legalities.status = status_v::em_status
 ORDER BY (cards.name))
@@ -62,6 +63,6 @@ ORDER BY (cards.name))
 SELECT * 
 FROM A
 ORDER BY random()
-LIMIT enchantments_limit_v ::integer;
+LIMIT enchantments_limit_v::integer;
 
 END; $T$ LANGUAGE 'plpgsql';
