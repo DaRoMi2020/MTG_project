@@ -1,0 +1,11 @@
+CREATE FUNCTION main_function ()
+
+RETURNS TABLE
+
+AS $$
+
+BEGIN
+
+RETURN QUERY 
+
+END; $T$ LANGUAGE 'plpgsql';
