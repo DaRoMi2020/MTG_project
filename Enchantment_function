@@ -9,7 +9,8 @@ CREATE FUNCTION enchantment_function (
 	enchantments_types_v TEXT,
 	enchantments_sub_exclude TEXT DEFAULT NULL,
 	enchantments_sub_include TEXT DEFAULT NULL,
-	enchantments_super_types_v TEXT DEFAULT NULL)
+	enchantments_super_exclude TEXT DEFAULT NULL,
+	enchantments_super_include TEXT DEFAULT NULL)
 
 
 RETURNS TABLE (c_name_t TEXT,
@@ -52,10 +53,12 @@ cards.rarity = enchantments_rarity_v::em_rarity AND
 cards.types::TEXT ILIKE enchantments_types_v::TEXT AND
 cards.types::TEXT NOT ILIKE '%Land%' AND
 cards.types::TEXT NOT ILIKE '%Creature%' AND
-((enchantments_sub_exclude IS NULL AND cards.subtypes IS NULL) OR 
+((enchantments_sub_exclude IS NULL AND cards.subtypes::TEXT IS NULL) OR 
 	(enchantments_sub_exclude IS NOT NULL AND cards.subtypes::TEXT ILIKE enchantments_sub_include) OR 
-	(enchantments_sub_exclude IS NULL OR cards.subtypes::TEXT ILIKE enchantments_sub_include)) AND
-(enchantments_super_types_v IS NULL OR cards.supertypes::TEXT ILIKE enchantments_super_types_v::TEXT) AND
+	(enchantments_sub_exclude IS NULL AND cards.subtypes::TEXT ILIKE enchantments_sub_include)) AND
+((enchantments_super_exclude IS NULL AND cards.supertypes::TEXT IS NULL) OR 
+	(enchantments_super_exclude IS NOT NULL AND cards.supertypes::TEXT ILIKE enchantments_super_include) OR 
+	(enchantments_super_exclude IS NULL AND cards.supertypes::TEXT ILIKE enchantments_super_include)) AND
 legalities.format = format_v::em_format AND 
 legalities.status = status_v::em_status
 ORDER BY (cards.name))
