@@ -56,4 +56,4 @@ END; $T$ LANGUAGE 'plpgsql';
 
 ------
 
---
+--SELECT * FROM creatures_function (10, 'rare', 'legacy', 'Legal', 'B');
