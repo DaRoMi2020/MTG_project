@@ -10,15 +10,14 @@ CREATE FUNCTION creatures_function (
 
 
 
-RETURNS TABLE (c_name_t TEXT,
-	cards_id integer,
-	c_colors_t TEXT ,
-	c_rarity_t em_rarity,
-	c_types_t TEXT,
-	c_subtypes_t TEXT,
-	l_id_t integer,
-	l_form_t em_format,
-	l_stat_t em_status
+RETURNS TABLE (card_name TEXT,
+	card_id integer,
+	card_colors TEXT,
+	card_rarity em_rarity,
+	card_types TEXT,
+	card_subtypes TEXT,
+	card_format em_format,
+	card_format_status em_status
 	)
 
 AS $T$
@@ -30,6 +29,8 @@ sub_temp TEXT[] = (WITH A_con AS (
 		)
 SELECT array_agg(concat) sub_temp
 FROM A_con);
+
+--
 
 BEGIN
 
@@ -43,7 +44,6 @@ cards.colors,
 cards.rarity,
 cards.types,
 cards.subtypes,
-legalities.id, 
 legalities.format, 
 legalities.status 
 FROM cards 
@@ -72,6 +72,3 @@ LIMIT creatures_limit_v::integer;
 
 END; $T$ LANGUAGE 'plpgsql';
 
-------
-
---SELECT * FROM creatures_function (10, 'rare', 'legacy', 'Legal', 'B');
