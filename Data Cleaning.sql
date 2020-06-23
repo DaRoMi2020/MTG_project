@@ -1,8 +1,8 @@
 --Data Cleaning
 
-/*Before cleaning The Planeswalker 'The Wanderder' had a NULL value in their subtype value
-unlike all other Planeswalker cards. Rather than write a script to deal with this it was 
-easier to fix as long as I followed the data rules.*/
+/*The rows for The Planeswalker 'The Wanderder' have a NULL value in their subtype attribute,
+unlike all other Planeswalker cards. Rather than write a script in a function to handle the null it simpler to
+replace .*/
 
 BEGIN;
 	SAVEPOINT planeswalkerfix_1;

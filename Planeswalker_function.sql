@@ -1,16 +1,15 @@
 
 --Planeswalker function
 
-/*The planeswalker function is simpler than the other functions due to the unqiue 
-nature and completeness of the planeswalker data in the type, subtype, and 
-supertype columns. Unlike all other card types, planeswalkers are a singular and united 
-type. There are no 'Artifact' planeswalkers like there are for lands, creatures, etc. 
-Another thing unusual about planeswalkers is that their subtypes are mutually exclusive. 
-Choosing any particular subtype or tribe of planeswalker will not select another tribe of 
-planeswalker that you might not want with any influence from a function. Compare this to 
-creatures where if you were to input a single creature 'Zombie' you would get 'Zombie, Knight' 
-and takes the logic in logic in the creature function to get mutual exclusivity. Regarding the 
-Planeswalkers' supertype, given that they are all legendary permanents all the function needs 
+/* Due to the nature and completeness of the Planeswalker data in the type, subtype, and 
+supertype columns the Planeswalker function is the simplest function among all the functions.
+Unlike all other card types, Planeswalkers are a singular and united type. There are no 'Artifact' 
+Planeswalkers like there are for lands, creatures, etc. Another unusual attribute of Planeswalkers 
+is that their subtypes are mutually exclusive. Choosing any particular subtype or tribe of 
+Planeswalker will not select another tribe of Planeswalker that you might not want in your random 
+deck. Compare this to creatures where if you were to input a single creature subtype/tribe 'Zombie' 
+you would get 'Zombie, Knight'. It takes the logic within the creature function to get mutual exclusivity. 
+Regarding the Planeswalkers' supertype, given that they are all legendary permanents, all the function needs 
 to do is pass along the column without interaction. */
 
 
