@@ -73,7 +73,7 @@ LIMIT planeswalker_limit_v::integer;
 END; $T$ LANGUAGE 'plpgsql';
 
 
---function testing
+--Function testing
 
 --SELECT * FROM planeswalker_function (10, 'mythic', 'legacy', 'Legal', 'B', array[['Liliana'],['Sorin']]);
 
