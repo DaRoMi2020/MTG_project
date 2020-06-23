@@ -1,3 +1,5 @@
+
+
 CREATE FUNCTION creatures_function (
 	creatures_limit_v integer, 
 	creatures_rarity_v em_rarity,
@@ -31,6 +33,8 @@ sub_temp TEXT[] = 	(WITH A_con AS (
 					FROM A_con);
 
 
+--
+
 BEGIN
 
 RETURN QUERY 
@@ -51,14 +55,17 @@ ON cards.uuid = legalities.uuid
 WHERE 
 	cards.colors::TEXT ILIKE color_v::TEXT AND
 	cards.rarity = creatures_rarity_v::em_rarity AND
+	legalities.format = format_v::em_format AND 
+	legalities.status = status_v::em_status AND
 	((cards.types::TEXT ILIKE creatures_types_exclude::TEXT AND creatures_types_include::TEXT IS NULL) OR
 		(cards.types::TEXT ILIKE creatures_types_exclude::TEXT AND cards.types::TEXT ILIKE ANY (creatures_types_include::TEXT[]))) AND 
 	(sub_temp IS NULL OR cards.subtypes::TEXT ~* ANY (sub_temp::TEXT[])) AND
 	((creatures_super_exclude IS NULL AND cards.supertypes::TEXT IS NULL) OR 
 		(creatures_super_exclude IS NOT NULL AND cards.supertypes::TEXT ILIKE creatures_super_include) OR 
-		(creatures_super_exclude IS NULL AND cards.supertypes::TEXT ILIKE creatures_super_include)) AND
-	legalities.format = format_v::em_format AND 
-	legalities.status = status_v::em_status
+		(creatures_super_exclude IS NULL AND cards.supertypes::TEXT ILIKE creatures_super_include))
+
+--
+
 ORDER BY (cards.name))
 
 SELECT * 
@@ -68,6 +75,11 @@ LIMIT creatures_limit_v::integer;
 
 END; $T$ LANGUAGE 'plpgsql';
 
+--Function Testing
+
+--
+
+--
 
 
 
