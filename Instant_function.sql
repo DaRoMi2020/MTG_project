@@ -12,7 +12,7 @@ CREATE FUNCTION instant_function (
 	color_v TEXT,
 	instant_types_exclude TEXT DEFAULT 'Instant',
 	instant_types_include TEXT DEFAULT NULL,
-	instant_sub TEXT[] DEFAULT NULL)
+	instant_subtype TEXT[] DEFAULT NULL)
 
 RETURNS TABLE (card_name TEXT,
 	card_id integer,
@@ -51,7 +51,7 @@ WHERE
 	legalities.status = status_v::em_status AND
 	((cards.types::TEXT ILIKE instant_types_exclude::TEXT AND instant_types_include::TEXT IS NULL) OR
 		(cards.types::TEXT ILIKE instant_types_exclude::TEXT AND cards.types::TEXT ILIKE instant_types_include::TEXT)) AND
-	(instant_sub::TEXT[] IS NULL OR cards.subtypes ~* ANY (instant_sub::TEXT[]))
+	(instant_subtype::TEXT[] IS NULL OR cards.subtypes ~* ANY (instant_subtype::TEXT[]))
 
 ORDER BY (cards."name"))
 
@@ -62,6 +62,7 @@ LIMIT instant_limit_v::integer;
 
 END; $T$ LANGUAGE 'plpgsql';
 
+--Testing function
 
 --SELECT * FROM instant_function (10, 'common', 'legacy', 'Legal', 'B');
 
