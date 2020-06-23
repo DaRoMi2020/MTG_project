@@ -60,8 +60,8 @@ WHERE
 	((cards.types::TEXT ILIKE planeswalker_types::TEXT AND cards.subtypes::TEXT ~* ANY (planeswalker_subtypes::TEXT[]))
 		OR (cards.types::TEXT ILIKE planeswalker_types::TEXT AND planeswalker_subtypes::TEXT IS NULL))
 
-/* Logic allows for input of array of desired planeswalkers while excluding unwanted planeswalkers 
-or includes all planeswalkers when subtypes is NULL*/
+/* Logic allows for input of array of desired Planeswalkers while excluding unwanted Planeswalkers 
+or includes all Planeswalkers when subtypes is NULL*/
 
 ORDER BY (cards."name"))
 
