@@ -1,6 +1,11 @@
 
+--Creatures Functions
 
-CREATE FUNCTION creatures_function (
+/*The Creature function is the most complicated function due to the diversity of types, subtypes, 
+supertypes.*/
+
+
+CREATE FUNCTION creature_function (
 	creatures_limit_v integer, 
 	creatures_rarity_v em_rarity,
 	format_v em_format, 
@@ -32,8 +37,6 @@ sub_temp TEXT[] = 	(WITH A_con AS (
 					SELECT array_agg(concat) sub_temp
 					FROM A_con);
 
-
---
 
 BEGIN
 
@@ -77,9 +80,9 @@ END; $T$ LANGUAGE 'plpgsql';
 
 --Function Testing
 
---
+--SELECT * FROM creature_function (10, 'rare', 'legacy', 'Legal', 'B');
 
---
+--SELECT * FROM creature_function (10, 'rare', 'legacy', 'Legal', 'B', NULL, );
 
 
 
