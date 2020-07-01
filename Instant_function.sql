@@ -1,21 +1,23 @@
 
 --Instant function
 
+
 /**/
 
 
-CREATE FUNCTION instant_function (
-	instant_limit_v integer, 
-	instant_rarity_v em_rarity,
+CREATE FUNCTION instants_function (
+	instants_limit_v INTEGER, 
+	instants_rarity_v em_rarity,
 	format_v em_format, 
 	status_v em_status, 
 	color_v TEXT,
-	instant_types_exclude TEXT DEFAULT 'Instant',
-	instant_types_include TEXT DEFAULT NULL,
-	instant_subtype TEXT[] DEFAULT NULL)
+	instants_type_exclude TEXT DEFAULT 'Instant',
+	instants_type_include TEXT DEFAULT NULL,
+	instants_sub_exclude TEXT DEFAULT NULL,
+	instants_sub_include TEXT[] DEFAULT NULL)
 
 RETURNS TABLE (card_name TEXT,
-	card_id integer,
+	card_id INTEGER,
 	card_colors TEXT,
 	card_rarity em_rarity,
 	card_types TEXT,
@@ -44,32 +46,59 @@ SELECT DISTINCT ON (cards."name") cards."name",
 	FROM cards 
 LEFT OUTER JOIN legalities 
 ON cards.uuid = legalities.uuid
+
 WHERE 
 	cards.colors::TEXT ILIKE color_v::TEXT AND
-	cards.rarity = instant_rarity_v::em_rarity AND
+	cards.rarity = instants_rarity_v::em_rarity AND
 	legalities.format = format_v::em_format AND 
 	legalities.status = status_v::em_status AND
-	((cards.types::TEXT ILIKE instant_types_exclude::TEXT AND instant_types_include::TEXT IS NULL) OR
-		(cards.types::TEXT ILIKE instant_types_exclude::TEXT AND cards.types::TEXT ILIKE instant_types_include::TEXT)) AND
-	(instant_subtype::TEXT[] IS NULL OR cards.subtypes ~* ANY (instant_subtype::TEXT[]))
+
+((instants_type_exclude::TEXT IS NULL AND cards.types::TEXT ILIKE '%Instant%' AND cards.types::TEXT ILIKE instants_type_include::TEXT IS NULL) OR -- Include or exclude tribal depending on subtype selection, 
+	(cards.types::TEXT ILIKE instants_type_exclude::TEXT AND instants_type_include::TEXT IS NULL) OR --default exclude: Exclude tribal
+	(instants_type_exclude::TEXT IS NOT NULL AND cards.types::TEXT ILIKE '%Instant%' AND cards.types::TEXT ILIKE instants_type_include::TEXT)) AND -- only tribal
+
+((instants_sub_exclude::TEXT IS NULL AND cards.subtypes::TEXT IS NULL OR cards.subtypes::TEXT ~* ANY (instants_sub_include::TEXT[])) OR --include all choosen including null 
+	(instants_sub_exclude::TEXT IS NULL AND cards.subtypes::TEXT IS NULL AND instants_sub_include::TEXT[] IS NULL) OR --Exclude subtypes not null
+	(instants_sub_exclude::TEXT IS NOT NULL AND cards.subtypes::TEXT IS NOT NULL AND cards.subtypes::TEXT ~* ANY (instants_sub_include::TEXT[])))--exclude nulls
 
 ORDER BY (cards."name"))
 
 SELECT * 
 FROM A
 ORDER BY random()
-LIMIT instant_limit_v::integer;
+LIMIT instants_limit_v::INTEGER;
 
 END; $T$ LANGUAGE 'plpgsql';
 
---Testing function
 
---SELECT * FROM instant_function (10, 'common', 'legacy', 'Legal', 'B');
+--------------------------------------
 
---SELECT * FROM instant_function (10, 'common', 'legacy', 'Legal', 'B', '%Instant%', '%Tribal%');
 
---SELECT * FROM instant_function (10, 'common', 'legacy', 'Legal', 'B', '%Instant%', '%Tribal%', array[['Faerie']]);
+-- Function Testing
 
---SELECT * FROM instant_function (10, 'common', 'legacy', 'Legal', 'B', 'Instant', NULL, array[['Arcane']]);
+SELECT * FROM instants_function (10, 'uncommon', 'legacy', 'Legal', 'W');
+-- Exclude tribal type, exclude subtypes not null
 
---DROP FUNCTION instant_function (INTEGER, em_rarity, em_format, em_status, TEXT, TEXT, TEXT, TEXT[]);
+SELECT * FROM instants_function (10, 'uncommon', 'legacy', 'Legal', 'W', NULL, NULL, NULL, array[['Adventure'], ['Arcane'], ['Trap']]);
+-- Exclude tribal type, include selected subtype and null subtype
+
+SELECT * FROM instants_function (10, 'uncommon', 'legacy', 'Legal', 'W', NULL, NULL, 'exclude', array[['Adventure'], ['Arcane'], ['Trap']]);
+-- Exclude tribal type, include selected subtype and exclude null subtype
+
+
+SELECT * FROM instants_function (10, 'uncommon', 'legacy', 'Legal', 'W', 'exclude', '%Tribal%', 'exclude', array[['Shapeshifter']]);
+-- Exclude nulls type, exclude null subtype
+
+SELECT * FROM instants_function (10, 'uncommon', 'legacy', 'Legal', 'W', NULL, NULL, NULL, array[['Shapeshifter']]);
+-- Include all types limited by entered subtypes
+
+
+
+-- Query Type, Subtypes, Supertypes
+
+SELECT DISTINCT ON (types) types, subtypes FROM cards WHERE types ILIKE '%Instant%' 
+AND types NOT ILIKE '%Creature%';
+
+SELECT DISTINCT ON (subtypes) subtypes, types FROM cards WHERE types ILIKE '%Instant%' AND NOT ILIKE '%Creature%'; 
+
+SELECT DISTINCT ON (supertypes) supertypes, types, subtypes FROM cards WHERE types ILIKE '%Instant%' AND NOT ILIKE '%Creature%';
