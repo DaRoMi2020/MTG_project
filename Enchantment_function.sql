@@ -59,7 +59,7 @@ cards.types::TEXT NOT ILIKE '%Land%' AND
 legalities.format = format_v::em_format AND 
 legalities.status = status_v::em_status AND
 
-((enchantments_type_exclude::TEXT IS NULL AND cards.types::TEXT ILIKE '%Enchantment%' AND cards.types::TEXT ILIKE enchantments_type_include IS NULL) OR --include all enchantments
+((enchantments_type_exclude::TEXT IS NULL AND cards.types::TEXT ILIKE '%Enchantment%' AND cards.types::TEXT ILIKE enchantments_type_include::TEXT IS NULL) OR --include all enchantments
 	(cards.types::TEXT ILIKE enchantments_type_exclude::TEXT AND enchantments_type_include::TEXT IS NULL) OR --default exclude: Exclude tribal
 	(enchantments_type_exclude::TEXT IS NULL AND cards.types::TEXT ILIKE '%Enchantment%' AND cards.types::TEXT ILIKE enchantments_type_include::TEXT)) AND --only tribal
 
@@ -69,7 +69,7 @@ legalities.status = status_v::em_status AND
 
 ((enchantments_super_exclude::TEXT IS NULL AND cards.supertypes::TEXT IS NULL OR cards.supertypes::TEXT ~* ANY (enchantments_super_include::TEXT[])) OR --include all choosen including null
 	(enchantments_super_exclude::TEXT IS NULL AND cards.supertypes::TEXT IS NULL AND enchantments_super_include::TEXT[] IS NULL) OR --Exclude subtypes not null
-	(enchantments_super_exclude::TEXT IS NOT NULL AND cards.supertypes::TEXT IS NOT NULL AND cards.supertypes::TEXT ~* ANY (enchantments_super_include::TEXT[]))) --include all choosen amd exclude nulls 
+	(enchantments_super_exclude::TEXT IS NOT NULL AND cards.supertypes::TEXT IS NOT NULL AND cards.supertypes::TEXT ~* ANY (enchantments_super_include::TEXT[]))) --include all choosen and exclude nulls 
 
 ORDER BY (cards."name"))
 
@@ -81,9 +81,10 @@ LIMIT enchantments_limit_v::INTEGER;
 END; $T$ LANGUAGE 'plpgsql';
 
 
--- Function testing
+--------------------------------------
 
--- DROP FUNCTION enchantments_function(INTEGER, em_rarity, em_format, em_status, TEXT, TEXT, TEXT, TEXT[], TEXT, TEXT[]);
+
+-- Function Testing
 
 SELECT * FROM enchantments_function (10, 'uncommon', 'legacy', 'Legal', 'B');
 -- Exclude tribal, exclude subtypes not null
@@ -102,7 +103,7 @@ array[['Aura'], ['Cartouche'], ['Curse'], ['Saga'], ['Shrine']], 'exclude null s
 -- Includes every enchantment, excludes tribal and tribal subtypes, exclude null supertype and include legendary supertype
 
 
-
+-- Query Type, Subtypes, Supertypes
 
 SELECT DISTINCT ON (types) types, subtypes FROM cards WHERE types ILIKE '%Enchantment%' 
 AND types NOT ILIKE '%Creature%' AND types NOT ILIKE '%Land%' AND types NOT ILIKE '%Artifact%';

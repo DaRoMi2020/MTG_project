@@ -85,7 +85,6 @@ SELECT * FROM instants_function (10, 'uncommon', 'legacy', 'Legal', 'W', NULL, N
 SELECT * FROM instants_function (10, 'uncommon', 'legacy', 'Legal', 'W', NULL, NULL, 'exclude', array[['Adventure'], ['Arcane'], ['Trap']]);
 -- Exclude tribal type, include selected subtype and exclude null subtype
 
-
 SELECT * FROM instants_function (10, 'uncommon', 'legacy', 'Legal', 'W', 'exclude', '%Tribal%', 'exclude', array[['Shapeshifter']]);
 -- Exclude nulls type, exclude null subtype
 
