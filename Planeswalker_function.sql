@@ -19,8 +19,8 @@ CREATE FUNCTION planeswalker_function (
 	format_v em_format, 
 	status_v em_status, 
 	color_v TEXT,
-	planeswalker_subtypes TEXT [] DEFAULT NULL,
-	planeswalker_types TEXT DEFAULT 'Planeswalker')
+	planeswalkers_sub_exclude TEXT DEFAULT NULL,
+	planeswalkers_sub_include TEXT [] DEFAULT NULL)
 
 RETURNS TABLE (card_name TEXT,
 	card_id integer,
@@ -53,12 +53,15 @@ SELECT DISTINCT ON (cards."name") cards."name",
 LEFT OUTER JOIN legalities 
 ON cards.uuid = legalities.uuid
 WHERE 
+	cards.types::TEXT ILIKE 'Planeswalker' AND
 	cards.colors::TEXT ILIKE color_v::TEXT AND
 	cards.rarity = planeswalker_rarity_v::em_rarity AND
 	legalities.format = format_v::em_format AND 
 	legalities.status = status_v::em_status AND
-	((cards.types::TEXT ILIKE planeswalker_types::TEXT AND cards.subtypes::TEXT ~* ANY (planeswalker_subtypes::TEXT[]))
-		OR (cards.types::TEXT ILIKE planeswalker_types::TEXT AND planeswalker_subtypes::TEXT IS NULL))
+
+	((planeswalkers_sub_exclude::TEXT IS NULL AND cards.subtypes::TEXT IS NOT NULL AND planeswalkers_sub_include::TEXT[] IS NULL) OR -- include all creature subtypes
+	(planeswalkers_sub_exclude::TEXT IS NULL AND cards.subtypes::TEXT IS NOT NULL AND cards.subtypes::TEXT ~* ANY (planeswalkers_sub_include::TEXT[])) OR -- include selected subtypes
+	(planeswalkers_sub_exclude::TEXT IS NOT NULL AND cards.subtypes::TEXT IS NOT NULL AND cards.subtypes::TEXT !~* ALL (planeswalkers_sub_include::TEXT[]))) -- exclude selected subtypes
 
 /* Logic allows for input of array of desired Planeswalkers while excluding unwanted Planeswalkers 
 or includes all Planeswalkers when subtypes is NULL*/
@@ -75,14 +78,23 @@ END; $T$ LANGUAGE 'plpgsql';
 
 --Function testing
 
---SELECT * FROM planeswalker_function (10, 'mythic', 'legacy', 'Legal', 'B', array[['Liliana'],['Sorin']]);
+SELECT * FROM planeswalker_function (10, 'mythic', 'legacy', 'Legal', 'B');
 
---SELECT * FROM planeswalker_function (10, 'mythic', 'legacy', 'Legal', 'B', array[['Liliana']]);
-
---SELECT * FROM planeswalker_function (10, 'mythic', 'legacy', 'Legal', 'B');
-
---DROP FUNCTION planeswalker_function(INTEGER,em_rarity, em_format, em_status, TEXT, TEXT[], TEXT);
+-- Includes all planeswalkers (default)
 
 
+SELECT * FROM planeswalker_function (10, 'mythic', 'legacy', 'Legal', 'B', NULL, array[['Liliana'],['Sorin']]);
+
+-- Includes only selected planeswalkers 
+
+
+SELECT * FROM planeswalker_function (10, 'mythic', 'legacy', 'Legal', 'B', 'exclude', array[['Liliana']]);
+
+-- exclude selected planeswalkers 
+
+
+-- Query Subtypes
+
+SELECT DISTINCT ON (subtypes) subtypes, types FROM cards WHERE types ILIKE '%Planeswalker%';
 
 

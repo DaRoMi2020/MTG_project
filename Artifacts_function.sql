@@ -60,7 +60,7 @@ legalities.format = format_v::em_format AND
 legalities.status = status_v::em_status AND
 
 
-((artifacts_type_exclude::TEXT IS NULL AND cards.types::TEXT ILIKE '%Artifact%' AND cards.types::TEXT ILIKE artifacts_type_include::TEXT IS NULL) OR --include all artifacts
+((artifacts_type_exclude::TEXT IS NULL AND cards.types::TEXT ILIKE '%Artifact%' AND cards.types::TEXT ILIKE artifacts_type_include::TEXT IS NULL) OR -- Include or exclude tribal depending on subtype selection, 
 	(artifacts_type_exclude::TEXT IS NOT NULL AND cards.types::TEXT ILIKE 'Artifact' AND artifacts_type_include::TEXT IS NULL) OR -- Exclude tribal
 	(artifacts_type_exclude::TEXT IS NULL AND cards.types::TEXT ILIKE '%Artifact%' AND cards.types::TEXT ILIKE artifacts_type_include::TEXT)) AND -- only tribal
 
@@ -82,33 +82,32 @@ LIMIT artifacts_limit_v::INTEGER;
 END; $T$ LANGUAGE 'plpgsql';
 
 
---Function testing
+-- Function testing
 
 SELECT * FROM artifacts_function (1000, 'uncommon', 'legacy', 'Legal', NULL); 
 
-SELECT * FROM artifacts_function (1000, 'uncommon', 'legacy', 'Legal', NULL, NULL, NULL, NULL, array[['%Equipment%'],['Food'], ['Fortification'], ['Vehicle']], NULL, array[['Legendary'],['Snow']]);
+SELECT * FROM artifacts_function (1000, 'uncommon', 'legacy', 'Legal', NULL, NULL, NULL, NULL, array[['Equipment'],['Food'], ['Fortification'], ['Vehicle']], NULL, array[['Legendary'],['Snow']]);
 
--- Includes all options, includes all subtypes, includes all supertypes (default)
+-- Includes all artifacts, includes all subtypes, includes all supertypes (default)
 
 SELECT * FROM artifacts_function (1000, 'uncommon', 'legacy', 'Legal', NULL, 'exclude'); 
 
+-- Excludes tribal, includes all subtypes, includes all supertypes 
+
+SELECT * FROM artifacts_function (1000, 'uncommon', 'legacy', 'Legal', NULL, NULL, '%Tribal%'); 
+
+-- Include only tribal artifact, includes only tribal subtypes, includes all supertypes 
+
+SELECT * FROM artifacts_function (1000, 'uncommon', 'legacy', 'Legal', NULL, NULL, NULL, 'include', array[['Equipment']]); 
+
+-- Includes all artifacts, includes only equipment, includes all supertypes 
+
+SELECT * FROM artifacts_function (1000, 'uncommon', 'legacy', 'Legal', NULL, NULL, NULL, NULL, NULL, NULL, NULL); 
+
+-- Excludes tribal type based on excluding subtype, excludes all subtypes, excludes all non-null supertypes 
 
 
-
-SELECT * FROM artifacts_function (100, 'uncommon', 'legacy', 'Legal', NULL, NULL, '%Tribal%'); 
-
--- Excludes all artifacts but tribal
-
-SELECT * FROM artifacts_function (100, 'uncommon', 'legacy', 'Legal', NULL, NULL, '%Tribal%', NULL, array[['Equipment']]); 
--- Includes only tribal artifacts, includes Normal and Equipment subtype, excludes supertypes not null
-
-SELECT * FROM artifacts_function (10, 'uncommon', 'legacy', 'Legal', NULL, NULL, NULL, NULL, array[['Equipment']], 'Exclude', 'Legendary'); 
--- Excludes tribal type, includes normal and Equipment subtype, includes only legendary supertype 
-
-
-
-
-Query Type, Subtypes, Supertypes
+-- Query Type, Subtypes, Supertypes
 
 SELECT DISTINCT ON (types) types, subtypes FROM cards WHERE types ILIKE '%Artifact%' 
 AND types NOT ILIKE '%Creature%' AND types NOT ILIKE '%Land%' AND types NOT ILIKE '%Enchantment%' AND types NOT ILIKE '%Hero%';
