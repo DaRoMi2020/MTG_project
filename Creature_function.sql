@@ -11,7 +11,7 @@ CREATE FUNCTION creatures_function (
 	format_v em_format, 
 	status_v em_status, 
 	color_v TEXT,
-	creatures_types_exclude TEXT DEFAULT 'Creature',
+	creatures_types_exclude TEXT DEFAULT NULL,
 	creatures_types_include TEXT [] DEFAULT NULL,
 	creatures_primary_sub_exclude TEXT DEFAULT NULL,
 	creatures_primary_sub_include TEXT [] DEFAULT NULL,
@@ -22,7 +22,7 @@ CREATE FUNCTION creatures_function (
 	creatures_quaternary_sub_exclude TEXT DEFAULT NULL,
 	creatures_quaternary_sub_include TEXT [] DEFAULT NULL,
 	creatures_super_exclude TEXT DEFAULT NULL,
-	creatures_super_include TEXT[] DEFAULT array[['Legendary'],['Snow']])
+	creatures_super_include TEXT [] DEFAULT array[['Legendary'],['Snow']])
 
 RETURNS TABLE (card_name TEXT,
 	card_id INTEGER,
@@ -84,7 +84,7 @@ WHERE
 	legalities.status = status_v::em_status AND
 
 ((creatures_types_exclude::TEXT IS NULL AND cards.types::TEXT ILIKE '%Creature%' AND creatures_types_include::TEXT[] IS NULL) OR --include all creatures types depending on subtype options
-	(cards.types::TEXT ILIKE creatures_types_exclude::TEXT AND creatures_types_include::TEXT[] IS NULL) OR -- default excludes non-basic creature types
+	(creatures_types_exclude::TEXT IS NOT NULL AND cards.types::TEXT ILIKE 'Creature' AND creatures_types_include::TEXT[] IS NULL) OR -- default excludes non-basic creature types
 	(creatures_types_exclude::TEXT IS NULL AND cards.types::TEXT ILIKE '%Creature%' AND cards.types::TEXT  ~* ANY (creatures_types_include::TEXT[]))) AND -- includes basic creature types and added types
 
 ((creatures_primary_sub_exclude::TEXT IS NULL AND cards.subtypes::TEXT IS NOT NULL AND p_temp_in::TEXT[] IS NULL) OR -- include all creature subtypes
@@ -103,7 +103,7 @@ WHERE
 	(creatures_quaternary_sub_exclude::TEXT IS NULL AND cards.subtypes::TEXT IS NOT NULL AND cards.subtypes::TEXT ~* ANY (q_temp_in::TEXT[])) OR -- include selected subtypes
 	(creatures_quaternary_sub_exclude::TEXT IS NOT NULL AND cards.subtypes::TEXT IS NOT NULL AND cards.subtypes::TEXT !~* ALL (q_temp_in::TEXT[]))) AND -- exclude selected subtypes
 
-((creatures_super_exclude::TEXT IS NULL AND cards.supertypes::TEXT IS NULL AND cards.supertypes::TEXT ~* ANY (creatures_super_include::TEXT[])) OR --include all choosen including null
+((creatures_super_exclude::TEXT IS NULL AND cards.supertypes::TEXT IS NULL OR cards.supertypes::TEXT ~* ANY (creatures_super_include::TEXT[])) OR --include all choosen including null
 	(creatures_super_exclude::TEXT IS NULL AND cards.supertypes::TEXT IS NULL AND creatures_super_include::TEXT[] IS NULL) OR --Exclude supertypes not null
 	(creatures_super_exclude::TEXT IS NOT NULL AND cards.supertypes::TEXT IS NOT NULL AND cards.supertypes::TEXT ~* ANY (creatures_super_include::TEXT[]))) --include all choosen and exclude nulls 
 
@@ -124,17 +124,13 @@ END; $T$ LANGUAGE 'plpgsql';
 
 SELECT * FROM creatures_function (1000, 'rare', 'legacy', 'Legal', '%B%'); 
 
--- Excludes non-basic creature types, includes all subtypes, includes all supertypes 
-
-SELECT * FROM creatures_function (1000, 'rare', 'legacy', 'Legal', '%B%', 'Creature', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
-
--- Excludes non-basic creature types, includes all subtypes, excludes supertypes not null
-
-SELECT * FROM creatures_function (1000, 'rare', 'legacy', 'Legal', '%B%', NULL);
-
 SELECT * FROM creatures_function (1000, 'rare', 'legacy', 'Legal', '%B%', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, array[['Legendary'],['Snow']]);
 
-SELECT * FROM creatures_function (1000, 'rare', 'legacy', 'Legal', '%B%', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,NULL, NULL);
+-- Includes all creature types, includes all creature subtypes, includes all supertypes (default)
+
+SELECT * FROM creatures_function (1000, 'rare', 'legacy', 'Legal', '%B%', 'Exclude', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+
+-- Excludes non-basic creature types, includes all subtypes, excludes supertypes not null 
 
 -- Includes all creature types, includes all subtypes, includes all supertypes
 
@@ -145,7 +141,6 @@ SELECT * FROM creatures_function (10, 'uncommon', 'legacy', 'Legal', '%B%', NULL
 SELECT * FROM creatures_function (10, 'uncommon', 'legacy', 'Legal', '%B%', NULL, array[['Enchantment']], NULL, array[['Demon']]);
 
 -- Excludes Basic creature types and includes only enchantment creature type, includes only enchantment demon creature subtype, includes all supertypes
-
 
 SELECT * FROM creatures_function (10, 'uncommon', 'legacy', 'Legal', '%B%', NULL, array[['Enchantment']], 'Exclude', array[['Demon']]);
 
@@ -170,8 +165,6 @@ SELECT * FROM creatures_function (10, 'uncommon', 'legacy', 'Legal', '%B%', NULL
 SELECT * FROM creatures_function (10, 'uncommon', 'legacy', 'Legal', '%B%', NULL, NULL, NULL, array[['Centaur']], NULL, array[['Druid']], NULL, array[['Scout']], NULL, array[['Archer']]);
 
 -- Includes all creature types, includes only Centaur as primary subtype and includes Druid as secondary subtype and Scout as third and Archer as fourth, includes all supertypes
-
-
 
 
 -- Query Type, Subtypes, Supertypes

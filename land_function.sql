@@ -4,19 +4,18 @@
 /**/
 
 
-CREATE FUNCTION land_function ( 
-	land_rarity_v em_rarity,
-	format_v em_format, 
-	status_v em_status, 
-	swamp_limit integer,
-	forest_limit integer,
-	island_limit integer,
-	mountain_limit integer,
-	plains_limit integer
+CREATE FUNCTION snow_basic_land_function ( 
+	swamp_limit INTEGER DEFAULT 0,
+	forest_limit INTEGER DEFAULT 0,
+	island_limit INTEGER DEFAULT 0,
+	mountain_limit INTEGER DEFAULT 0,
+	plains_limit INTEGER DEFAULT 0,
+	colorless_limit INTEGER DEFAULT 0,
+	snow_lands TEXT DEFAULT 'Include'
 	)
 
 RETURNS TABLE (card_name TEXT,
-	card_id integer,
+	card_id INTEGER,
 	card_colors TEXT,
 	card_rarity em_rarity,
 	card_types TEXT,
@@ -48,12 +47,12 @@ FROM cards
 LEFT OUTER JOIN legalities 
 ON cards.uuid = legalities.uuid
 WHERE 
-	cards.rarity = land_rarity_v::em_rarity AND
-	legalities.format = format_v::em_format AND 
-	legalities.status = status_v::em_status AND
-	subtypes ILIKE 'Swamp'
+	subtypes ILIKE 'Swamp' AND
+	((snow_lands::TEXT ILIKE 'Include' AND supertypes ILIKE '%Basic%') OR
+		(snow_lands::TEXT ILIKE 'Exclude' AND supertypes ILIKE '%Basic%' AND supertypes NOT ILIKE '%Snow%') OR
+		(snow_lands::TEXT ILIKE 'Snow Only' AND supertypes ILIKE '%Snow%'))
 ORDER BY cards
-LIMIT swamp_limit::integer)
+LIMIT swamp_limit::INTEGER)
 
 UNION
 
@@ -70,12 +69,12 @@ FROM cards
 LEFT OUTER JOIN legalities 
 ON cards.uuid = legalities.uuid
 WHERE 
-	cards.rarity = land_rarity_v::em_rarity AND
-	legalities.format = format_v::em_format AND 
-	legalities.status = status_v::em_status AND
-	subtypes ILIKE 'Forest'
+	subtypes ILIKE 'Forest' AND
+	((snow_lands::TEXT ILIKE 'Include' AND supertypes ILIKE '%Basic%') OR
+		(snow_lands::TEXT ILIKE 'Exclude' AND supertypes ILIKE '%Basic%' AND supertypes NOT ILIKE '%Snow%') OR
+		(snow_lands::TEXT ILIKE 'Snow Only' AND supertypes ILIKE '%Snow%'))
 ORDER BY cards
-LIMIT forest_limit::integer)
+LIMIT forest_limit::INTEGER)
 
 UNION
 
@@ -92,12 +91,12 @@ FROM cards
 LEFT OUTER JOIN legalities 
 ON cards.uuid = legalities.uuid
 WHERE 
-	cards.rarity = land_rarity_v::em_rarity AND
-	legalities.format = format_v::em_format AND 
-	legalities.status = status_v::em_status AND
-	subtypes ILIKE 'Island'
+	subtypes ILIKE 'Island' AND
+	((snow_lands::TEXT ILIKE 'Include' AND supertypes ILIKE '%Basic%') OR
+		(snow_lands::TEXT ILIKE 'Exclude' AND supertypes ILIKE '%Basic%' AND supertypes NOT ILIKE '%Snow%') OR
+		(snow_lands::TEXT ILIKE 'Snow Only' AND supertypes ILIKE '%Snow%'))
 ORDER BY cards
-LIMIT island_limit::integer)
+LIMIT island_limit::INTEGER)
 
 UNION
 
@@ -114,12 +113,12 @@ FROM cards
 LEFT OUTER JOIN legalities 
 ON cards.uuid = legalities.uuid
 WHERE 
-	cards.rarity = land_rarity_v::em_rarity AND
-	legalities.format = format_v::em_format AND 
-	legalities.status = status_v::em_status AND
-	subtypes ILIKE 'Mountain'
+	subtypes ILIKE 'Mountain' AND
+	((snow_lands::TEXT ILIKE 'Include' AND supertypes ILIKE '%Basic%') OR
+		(snow_lands::TEXT ILIKE 'Exclude' AND supertypes ILIKE '%Basic%' AND supertypes NOT ILIKE '%Snow%') OR
+		(snow_lands::TEXT ILIKE 'Snow Only' AND supertypes ILIKE '%Snow%'))
 ORDER BY cards
-LIMIT mountain_limit::integer)
+LIMIT mountain_limit::INTEGER)
 
 UNION
 
@@ -136,15 +135,35 @@ FROM cards
 LEFT OUTER JOIN legalities 
 ON cards.uuid = legalities.uuid
 WHERE 
-	cards.rarity = land_rarity_v::em_rarity AND
-	legalities.format = format_v::em_format AND 
-	legalities.status = status_v::em_status AND
-	subtypes ILIKE 'Plains'
+	subtypes ILIKE 'Plains' AND
+	((snow_lands::TEXT ILIKE 'Include' AND supertypes ILIKE '%Basic%') OR
+		(snow_lands::TEXT ILIKE 'Exclude' AND supertypes ILIKE '%Basic%' AND supertypes NOT ILIKE '%Snow%') OR
+		(snow_lands::TEXT ILIKE 'Snow Only' AND supertypes ILIKE '%Snow%'))
 ORDER BY cards
-LIMIT plains_limit::integer);
+LIMIT plains_limit::INTEGER)
+
+UNION
+
+(SELECT cards."name", 
+	cards.id, 
+	cards.colors,
+	cards.rarity,
+	cards.types,
+	cards.subtypes,
+	cards.supertypes,
+	legalities.format, 
+	legalities.status 
+FROM cards 
+LEFT OUTER JOIN legalities 
+ON cards.uuid = legalities.uuid
+WHERE 
+	subtypes IS NULL AND
+	supertypes ILIKE '%Basic%'
+ORDER BY cards
+LIMIT colorless_limit::INTEGER);
 
 
 END; $T$ LANGUAGE 'plpgsql';
 
 
---SELECT * FROM land_function ('common', 'legacy', 'Legal', 5, 5, 5, 5, 5)
+--SELECT * FROM snow_basic_land_function (500, 500, 500, 500, 500);
