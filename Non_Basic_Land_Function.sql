@@ -2,10 +2,11 @@
 -- Non-Basic Land 
 
 CREATE FUNCTION non_basic_land_function(
-	non_basic_land_limit_v INTEGER, 
-	non_basic_land_rarity_v em_rarity,
+	non_basic_land_limit_v INTEGER,
 	format_v em_format, 
 	status_v em_status,
+	planeswalkers_rarity_floor em_rarity DEFAULT 'common',
+	planeswalkers_rarity_ceiling em_rarity DEFAULT 'mythic',
 	non_basic_land_types_exclude TEXT DEFAULT NULL,
 	non_basic_land_types_include TEXT DEFAULT NULL,
 	non_basic_land_super_exclude TEXT DEFAULT NULL,
@@ -46,14 +47,15 @@ SELECT DISTINCT ON (cards."name") cards."name",
 LEFT OUTER JOIN legalities 
 ON cards.uuid = legalities.uuid
 WHERE 
-	cards.rarity = non_basic_land_rarity_v::em_rarity AND
 	legalities.format = format_v::em_format AND 
 	legalities.status = status_v::em_status AND
 	cards.types::TEXT NOT ILIKE '%Creature%' AND
 
-((non_basic_land_types_exclude::TEXT IS NULL AND cards.types::TEXT ILIKE '%Land%' AND non_basic_land_types_include::TEXT IS NULL) OR --include all creatures types depending on subtype options
-	(non_basic_land_types_exclude::TEXT IS NOT NULL AND cards.types::TEXT ILIKE 'Land' AND non_basic_land_types_include::TEXT IS NULL) OR -- default excludes non-basic creature types
-	(non_basic_land_types_exclude::TEXT IS NOT NULL AND cards.types::TEXT ILIKE '%Land%' AND cards.types::TEXT  ILIKE non_basic_land_types_include::TEXT)) AND -- includes basic creature types and added types
+	cards.rarity = ANY(enum_range(planeswalkers_rarity_floor::em_rarity, planeswalkers_rarity_ceiling::em_rarity)) AND
+
+	((non_basic_land_types_exclude::TEXT IS NULL AND cards.types::TEXT ILIKE '%Land%' AND non_basic_land_types_include::TEXT IS NULL) OR --include all creatures types depending on subtype options
+		(non_basic_land_types_exclude::TEXT IS NOT NULL AND cards.types::TEXT ILIKE 'Land' AND non_basic_land_types_include::TEXT IS NULL) OR -- default excludes non-basic creature types
+		(non_basic_land_types_exclude::TEXT IS NOT NULL AND cards.types::TEXT ILIKE '%Land%' AND cards.types::TEXT  ILIKE non_basic_land_types_include::TEXT)) AND -- includes basic creature types and added types
 
 	((non_basic_land_super_exclude::TEXT IS NULL AND cards.supertypes::TEXT IS NULL OR cards.supertypes::TEXT ~* ANY (non_basic_land_super_include::TEXT[]) AND cards.supertypes::TEXT !~* ANY (array[['Basic'], ['Basic,Snow']])) OR --include all choosen including null
 		(non_basic_land_super_exclude::TEXT IS NULL AND cards.supertypes::TEXT IS NULL AND non_basic_land_super_include::TEXT[] IS NULL) OR --Exclude supertypes not null
@@ -78,36 +80,82 @@ END; $T$ LANGUAGE 'plpgsql';
 
 -- Function Testing
 
-SELECT * FROM non_basic_land_function(1000, 'common', 'legacy', 'Legal');
 
-SELECT * FROM non_basic_land_function(1000, 'rare', 'legacy', 'Legal', NULL, NULL);
+-- Default
 
-SELECT * FROM non_basic_land_function(1000, 'rare', 'legacy', 'Legal', NULL, NULL, NULL,  ARRAY[['Legendary'],['Snow']]);
+SELECT * FROM non_basic_land_function(1000, 'legacy', 'Legal');
 
-SELECT * FROM non_basic_land_function(1000, 'rare', 'legacy', 'Legal', NULL, NULL, NULL,  ARRAY[['Legendary'],['Snow']], NULL, ARRAY[['B'], ['G'], ['R'], ['U'], ['W']]);
+SELECT * FROM non_basic_land_function(1000, 'legacy', 'Legal', 'common', 'mythic');
 
--- Includes all non-Basic lands types, includes all supertypes, includes colored mana production, default
+SELECT * FROM non_basic_land_function(1000, 'legacy', 'Legal', 'common', 'mythic', NULL, NULL);
 
-SELECT * FROM non_basic_land_function(1000, 'common', 'legacy', 'Legal', 'Exclude', '%Artifact%');
+SELECT * FROM non_basic_land_function(1000, 'legacy', 'Legal', 'common', 'mythic', NULL, NULL, NULL, ARRAY[['Legendary'],['Snow']]);
 
--- Includes only artifact non-Basic land type, excludes all non-null supertypes based on data, includes colored mana production
+SELECT * FROM non_basic_land_function(1000, 'legacy', 'Legal', 'common', 'mythic', NULL, NULL, NULL, ARRAY[['Legendary'],['Snow']], NULL, ARRAY[['B'], ['G'], ['R'], ['U'], ['W']]);
 
-SELECT * FROM non_basic_land_function(1000, 'rare', 'legacy', 'Legal', NULL, NULL, NULL, NULL);
+-- 1000 random cards (not a default option), legacy format (not a default option), legal in format(not a default option), 
+-- rarities between common and mythic rare, includes all types, includes non-basic supertypes
+-- includes and null single mana production 
 
--- Includes all non-Basic lands types, excludes non-nulls supertypes, includes colored mana production
 
-SELECT * FROM non_basic_land_function(1000, 'rare', 'legacy', 'Legal', NULL, NULL, 'Exclude', ARRAY[['Legendary'],['Snow']]);
+-- Rarity options
 
--- Includes all non-Basic lands types, excludes nulls supertypes, includes colored mana production
+SELECT * FROM non_basic_land_function (1000, 'legacy', 'Legal', 'common', 'mythic');
 
-SELECT * FROM non_basic_land_function(1000, 'uncommon', 'legacy', 'Legal', NULL, NULL, NULL,  ARRAY[['Legendary'],['Snow']], NULL, NULL);
+-- Default
 
--- Includes all non-Basic lands types, includes all supertypes, excludes colored mana production
+SELECT * FROM non_basic_land_function (1000, 'legacy', 'Legal', 'uncommon', 'uncommon'); 
 
-SELECT * FROM non_basic_land_function(1000, 'uncommon', 'legacy', 'Legal', NULL, NULL, NULL,  ARRAY[['Legendary'],['Snow']], 'Exclude', ARRAY[['B'], ['G'], ['R'], ['U'], ['W']]);
+-- Only includes Non-basic lands that are uncommon
 
--- Includes all non-Basic lands types, includes all supertypes, excludes colorless mana production
+SELECT * FROM non_basic_land_function (1000, 'legacy', 'Legal', 'common', 'rare'); 
 
+-- Only includes Non-basic lands  with rarities that are between common and rare excludes mythic rares
+
+
+-- Types Options
+
+SELECT * FROM non_basic_land_function(1000, 'legacy', 'Legal', 'common', 'mythic', NULL, NULL);
+
+-- Default
+
+SELECT * FROM non_basic_land_function(1000, 'legacy', 'Legal', 'common', 'mythic', 'Exclude', NULL);
+
+-- Exclude Artifact land type
+
+SELECT * FROM non_basic_land_function(1000, 'legacy', 'Legal', 'common', 'mythic', 'Include', '%Artifact%');
+
+-- Include only Artifact land type
+
+
+-- Supertypes Options
+
+SELECT * FROM non_basic_land_function(1000, 'legacy', 'Legal', 'common', 'mythic', NULL, NULL, NULL, ARRAY[['Legendary'],['Snow']]);
+
+-- Default
+
+SELECT * FROM non_basic_land_function(1000, 'legacy', 'Legal', 'common', 'mythic', NULL, NULL, NULL, NULL);
+
+-- excludes non-null supertypes
+
+SELECT * FROM non_basic_land_function(1000, 'legacy', 'Legal', 'common', 'mythic', NULL, NULL, 'Include', ARRAY[['Legendary'],['Snow']]);
+
+-- Include only selected supertypes, exlude nulls
+
+
+-- Mana Production options
+
+SELECT * FROM non_basic_land_function(1000, 'legacy', 'Legal', 'common', 'mythic', NULL, NULL, NULL, ARRAY[['Legendary'],['Snow']], NULL, ARRAY[['B'], ['G'], ['R'], ['U'], ['W']]);
+
+-- Default
+
+SELECT * FROM non_basic_land_function(1000, 'legacy', 'Legal', 'common', 'mythic', NULL, NULL, NULL, ARRAY[['Legendary'],['Snow']], NULL, NULL);
+
+-- Exclude colored mana production 
+
+SELECT * FROM non_basic_land_function(1000, 'legacy', 'Legal', 'common', 'mythic', NULL, NULL, NULL, ARRAY[['Legendary'],['Snow']], 'Include', ARRAY[['B'], ['G'], ['R'], ['U'], ['W']]);
+
+-- Include only single color mana productive lands
 
 -----------------------------------
 
