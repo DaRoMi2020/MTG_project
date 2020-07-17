@@ -1,15 +1,19 @@
 
---Enchantment function
+-- Enchantment function
 
 /**/
 
 
 CREATE FUNCTION enchantments_function (
 	enchantments_limit_v INTEGER, 
-	enchantments_rarity_v em_rarity,
 	format_v em_format, 
-	status_v em_status, 
-	color_v TEXT,
+	status_v em_status,
+	enchantments_rarity_floor em_rarity DEFAULT 'common',
+	enchantments_rarity_ceiling em_rarity DEFAULT 'mythic',
+	enchantments_colors_primary_exclude TEXT DEFAULT NULL,
+	enchantments_colors_primary_include TEXT [] DEFAULT array[['B'], ['G'], ['U'], ['W'], ['R']],
+	enchantments_colors_secondary TEXT [] DEFAULT NULL,
+	enchantments_colors_exclude_include TEXT DEFAULT 'Exclude', 
 	enchantments_type_exclude TEXT DEFAULT NULL,
 	enchantments_type_include TEXT DEFAULT NULL,
 	enchantments_sub_exclude TEXT DEFAULT NULL,
@@ -38,39 +42,47 @@ RETURN QUERY
 
 WITH A AS (
 SELECT DISTINCT ON 
-(cards."name") cards."name", 
-cards.id, 
-cards.colors,
-cards.rarity,
-cards.types,
-cards.subtypes,
-cards.supertypes,
-legalities.format, 
-legalities.status 
+	(cards."name") cards."name", 
+	cards.id, 
+	cards.colors,
+	cards.rarity,
+	cards.types,
+	cards.subtypes,
+	cards.supertypes,
+	legalities.format, 
+	legalities.status 
 FROM cards 
 LEFT OUTER JOIN legalities 
 ON cards.uuid = legalities.uuid
 
 WHERE 
-((cards.colors::TEXT ILIKE color_v::TEXT) OR (cards.colors::TEXT IS NULL AND color_v::TEXT IS NULL)) AND
-cards.rarity = enchantments_rarity_v::em_rarity AND
-cards.types::TEXT NOT ILIKE '%Creature%' AND
-cards.types::TEXT NOT ILIKE '%Artifact%' AND
-cards.types::TEXT NOT ILIKE '%Land%' AND
-legalities.format = format_v::em_format AND 
-legalities.status = status_v::em_status AND
+	legalities.format = format_v::em_format AND 
+	legalities.status = status_v::em_status AND
 
-((enchantments_type_exclude::TEXT IS NULL AND cards.types::TEXT ILIKE '%Enchantment%' AND cards.types::TEXT ILIKE enchantments_type_include::TEXT IS NULL) OR -- Include or exclude tribal depending on subtype selection, 
-	(enchantments_type_exclude::TEXT IS NOT NULL AND cards.types::TEXT ILIKE 'Enchantment' AND enchantments_type_include::TEXT IS NULL) OR -- Exclude tribal
-	(enchantments_type_exclude::TEXT IS NULL AND cards.types::TEXT ILIKE '%Enchantment%' AND cards.types::TEXT ILIKE enchantments_type_include::TEXT)) AND -- only tribal
+	cards.rarity = ANY(enum_range(enchantments_rarity_floor::em_rarity, enchantments_rarity_ceiling::em_rarity)) AND
 
-((enchantments_sub_exclude::TEXT IS NULL AND cards.subtypes::TEXT IS NULL OR cards.subtypes::TEXT ~* ANY (enchantments_sub_include::TEXT[])) OR --include all choosen including null 
-	(enchantments_sub_exclude::TEXT IS NULL AND cards.subtypes::TEXT IS NULL AND enchantments_sub_include::TEXT[] IS NULL) OR --Exclude subtypes not null
-	(enchantments_sub_exclude::TEXT IS NOT NULL AND cards.subtypes::TEXT IS NOT NULL AND cards.subtypes::TEXT ~* ANY (enchantments_sub_include::TEXT[]))) AND --exclude nulls
+	((enchantments_colors_primary_exclude::TEXT IS NULL AND cards.colors::TEXT IS NULL OR cards.colors::TEXT ~* ANY (enchantments_colors_primary_include::TEXT[])) OR -- include all choosen including null
+		(enchantments_colors_primary_exclude::TEXT IS NULL AND cards.colors::TEXT IS NULL AND enchantments_colors_primary_include::TEXT[] IS NULL) OR -- excludes non-null colors
+		(enchantments_colors_primary_exclude::TEXT IS NOT NULL AND cards.colors::TEXT IS NOT NULL AND cards.colors::TEXT ~* ANY (enchantments_colors_primary_include::TEXT[]))) AND -- exclude null
 
-((enchantments_super_exclude::TEXT IS NULL AND cards.supertypes::TEXT IS NULL OR cards.supertypes::TEXT ~* ANY (enchantments_super_include::TEXT[])) OR --include all choosen including null
-	(enchantments_super_exclude::TEXT IS NULL AND cards.supertypes::TEXT IS NULL AND enchantments_super_include::TEXT[] IS NULL) OR --Exclude subtypes not null
-	(enchantments_super_exclude::TEXT IS NOT NULL AND cards.supertypes::TEXT IS NOT NULL AND cards.supertypes::TEXT ~* ANY (enchantments_super_include::TEXT[]))) --include all choosen and exclude nulls 
+	((enchantments_colors_exclude_include::TEXT ILIKE 'Exclude' AND (enchantments_colors_secondary::TEXT[] IS NULL OR cards.colors::TEXT !~* ALL (enchantments_colors_secondary::TEXT[]))) OR
+		(enchantments_colors_exclude_include::TEXT ILIKE 'Include' AND (enchantments_colors_secondary::TEXT[] IS NULL OR cards.colors::TEXT ~* ANY (enchantments_colors_secondary::TEXT[])))) AND
+
+	cards.types::TEXT NOT ILIKE '%Creature%' AND
+	cards.types::TEXT NOT ILIKE '%Artifact%' AND
+	cards.types::TEXT NOT ILIKE '%Land%' AND
+
+	((enchantments_type_exclude::TEXT IS NULL AND cards.types::TEXT ILIKE '%Enchantment%' AND cards.types::TEXT ILIKE enchantments_type_include::TEXT IS NULL) OR -- Include or exclude tribal depending on subtype selection, 
+		(enchantments_type_exclude::TEXT IS NOT NULL AND cards.types::TEXT ILIKE 'Enchantment' AND enchantments_type_include::TEXT IS NULL) OR -- Exclude tribal
+		(enchantments_type_exclude::TEXT IS NOT NULL AND cards.types::TEXT ILIKE '%Enchantment%' AND cards.types::TEXT ILIKE enchantments_type_include::TEXT)) AND -- only tribal
+
+	((enchantments_sub_exclude::TEXT IS NULL AND cards.subtypes::TEXT IS NULL OR cards.subtypes::TEXT ~* ANY (enchantments_sub_include::TEXT[])) OR --include all choosen including null 
+		(enchantments_sub_exclude::TEXT IS NULL AND cards.subtypes::TEXT IS NULL AND enchantments_sub_include::TEXT[] IS NULL) OR --Exclude subtypes not null
+		(enchantments_sub_exclude::TEXT IS NOT NULL AND cards.subtypes::TEXT IS NOT NULL AND cards.subtypes::TEXT ~* ANY (enchantments_sub_include::TEXT[]))) AND --exclude nulls
+
+	((enchantments_super_exclude::TEXT IS NULL AND cards.supertypes::TEXT IS NULL OR cards.supertypes::TEXT ~* ANY (enchantments_super_include::TEXT[])) OR --include all choosen including null
+		(enchantments_super_exclude::TEXT IS NULL AND cards.supertypes::TEXT IS NULL AND enchantments_super_include::TEXT[] IS NULL) OR --Exclude subtypes not null
+		(enchantments_super_exclude::TEXT IS NOT NULL AND cards.supertypes::TEXT IS NOT NULL AND cards.supertypes::TEXT ~* ANY (enchantments_super_include::TEXT[]))) --include all choosen and exclude nulls 
 
 ORDER BY (cards."name"))
 
@@ -87,29 +99,125 @@ END; $T$ LANGUAGE 'plpgsql';
 
 -- Function Testing
 
-SELECT * FROM enchantments_function (1000, 'uncommon', 'legacy', 'Legal', 'B');
+-- Default
 
-SELECT * FROM enchantments_function (1000, 'uncommon', 'legacy', 'Legal', 'B', NULL, NULL, NULL, array[['Aura'], ['Elemental'], ['Elf'], ['Faerie'], ['Giant'],
-	['Goblin'], ['Kithkin'], ['Merfolk'], ['Saga'], ['Shrine']], NULL, array[['Legendary'],['Snow'], ['World']]);
+SELECT * FROM enchantments_function (1000, 'legacy', 'Legal');
 
--- includes all enchantment types, includes all subtypes, includes all supertypes (default)
+SELECT * FROM enchantments_function (1000, 'legacy', 'Legal', 'common', 'mythic');
 
-SELECT * FROM enchantments_function (1000, 'uncommon', 'legacy', 'Legal', 'B', NULL, '%Tribal%');
+SELECT * FROM enchantments_function (1000, 'legacy', 'Legal', 'common', 'mythic', NULL, array[['B'], ['G'], ['U'], ['W'], ['R']], NULL, 'Exclude');
 
--- includes only tribal enchantments, including only tribal subtypes, includes all supertypes 
+SELECT * FROM enchantments_function (1000, 'legacy', 'Legal', 'common', 'mythic', NULL, array[['B'], ['G'], ['U'], ['W'], ['R']], NULL, 'Exclude', NULL, NULL);
 
-SELECT * FROM enchantments_function (1000, 'rare', 'legacy', 'Legal', 'B', NULL, NULL, NULL, NULL, NULL, array[['Legendary']]);
+SELECT * FROM enchantments_function (1000, 'legacy', 'Legal', 'common', 'mythic', NULL, array[['B'], ['G'], ['U'], ['W'], ['R']], NULL, 'Exclude', NULL, NULL,
+	NULL, array[['Aura'], ['Elemental'], ['Elf'], ['Faerie'], ['Giant'], ['Goblin'], ['Kithkin'], ['Merfolk'], ['Saga'], ['Shrine']]);
 
--- Excludes tribal type based on excluding subtype, excludes all subtypes, includes null and legendary supertypes 
+SELECT * FROM enchantments_function (1000, 'legacy', 'Legal', 'common', 'mythic', NULL, array[['B'], ['G'], ['U'], ['W'], ['R']], NULL, 'Exclude', NULL, NULL,
+	NULL, array[['Aura'], ['Elemental'], ['Elf'], ['Faerie'], ['Giant'], ['Goblin'], ['Kithkin'], ['Merfolk'], ['Saga'], ['Shrine']],
+	NULL, array[['Legendary'],['Snow'], ['World']]);
 
-SELECT * FROM enchantments_function (1000, 'rare', 'legacy', 'Legal', 'B', NULL, NULL, NULL, NULL, NULL, NULL);
+-- 1000 random cards (not a default option), legacy format (not a default option), legal in format(not a default option), 
+-- Rarities between common and mythic rare, includes all colored and null enchantments, excludes no colored and null enchantments
+-- Includes all types, include all subtypes, includes all supertypes
 
--- Excludes tribal type based on excluding subtype, excludes all subtypes, excludes non-null supertypes 
 
-SELECT * FROM enchantments_function (1000, 'rare', 'legacy', 'Legal', 'B', NULL, NULL, NULL, NULL, 'include', array[['Legendary']]);
+-- Rarity options
 
--- Excludes tribal type based on excluding subtype, excludes all subtypes, includes only legendary supertypes 
+SELECT * FROM enchantments_function (1000, 'legacy', 'Legal', 'common', 'mythic');
 
+-- Default 
+
+SELECT * FROM enchantments_function (1000, 'legacy', 'Legal', 'uncommon', 'uncommon');
+
+-- Only includes enchantments that are uncommon
+
+SELECT * FROM enchantments_function (1000, 'legacy', 'Legal', 'common', 'rare');
+
+-- Only includes enchantments with rarities that are between common and rare excludes mythic rares
+
+
+-- Exclusion mode
+
+SELECT * FROM enchantments_function (1000, 'legacy', 'Legal', 'common', 'mythic', NULL, array[['B'], ['G'], ['U'], ['W'], ['R']], NULL, 'Exclude');
+
+-- Default
+
+SELECT * FROM enchantments_function (1000, 'legacy', 'Legal', 'common', 'mythic', NULL, array[['B'], ['G']], NULL, 'Exclude');
+
+-- Every card is either a black, green, or colorless, might have other colors as secondary colors.
+
+SELECT * FROM enchantments_function (1000, 'legacy', 'Legal', 'common', 'mythic', 'Exclude Nulls', array[['B'], ['G']], NULL, 'Exclude');
+
+-- Every card is either a black or green but not colorless, might have other colors as secondary colors.
+
+SELECT * FROM enchantments_function (1000, 'legacy', 'Legal', 'common', 'mythic', 'Exclude Nulls', array[['B'], ['G']], array[['W'], ['R'], ['U']], 'Exclude');
+
+-- Every card is either a black and/or green but not colorless, excludes white, red, and blue.
+
+-- Inclusion mode
+
+SELECT * FROM enchantments_function (1000, 'legacy', 'Legal', 'common', 'mythic', NULL, array[['B']], array[['G']], 'Include');
+
+-- every card must contain black and green, might have other colors as secondary colors.
+
+
+-- Types options
+
+SELECT * FROM enchantments_function (1000, 'legacy', 'Legal', 'common', 'mythic', NULL, array[['B'], ['G'], ['U'], ['W'], ['R']], NULL, 'Exclude', NULL, NULL);
+
+-- Include all enchantment types
+
+SELECT * FROM enchantments_function (1000, 'legacy', 'Legal', 'common', 'mythic', NULL, array[['B'], ['G'], ['U'], ['W'], ['R']], NULL, 'Exclude', 'Exclude', NULL);
+
+-- Exclude tribal enchantment type
+
+SELECT * FROM enchantments_function (1000, 'legacy', 'Legal', 'common', 'mythic', NULL, array[['B'], ['G'], ['U'], ['W'], ['R']], NULL, 'Exclude', 'Include', '%Tribal%');
+
+-- Include only tribal enchantment type
+
+
+-- Subtypes
+
+SELECT * FROM enchantments_function (1000, 'legacy', 'Legal', 'common', 'mythic', NULL, array[['B'], ['G'], ['U'], ['W'], ['R']], NULL, 'Exclude', NULL, NULL,
+	NULL, array[['Aura'], ['Elemental'], ['Elf'], ['Faerie'], ['Giant'], ['Goblin'], ['Kithkin'], ['Merfolk'], ['Saga'], ['Shrine']]);
+
+-- Default
+
+SELECT * FROM enchantments_function (1000, 'legacy', 'Legal', 'common', 'mythic', NULL, array[['B'], ['G'], ['U'], ['W'], ['R']], NULL, 'Exclude', NULL, NULL,
+	NULL, array[['Aura'], ['Saga'], ['Shrine']]);
+
+-- Includes all null subtypes and selected subtypes
+
+SELECT * FROM enchantments_function (1000, 'legacy', 'Legal', 'common', 'mythic', NULL, array[['B'], ['G'], ['U'], ['W'], ['R']], NULL, 'Exclude', NULL, NULL,
+	NULL, NULL);
+
+-- Excludes non-null subtypes (also excludes tribal type)
+
+SELECT * FROM enchantments_function (1000, 'legacy', 'Legal', 'common', 'mythic', NULL, array[['B'], ['G'], ['U'], ['W'], ['R']], NULL, 'Exclude', NULL, NULL,
+	'Exclude', array[['Aura'], ['Elemental'], ['Elf'], ['Faerie'], ['Giant'], ['Goblin'], ['Kithkin'], ['Merfolk'], ['Saga'], ['Shrine']]);
+
+--Excludes null subtypes
+
+
+--Supertypes options
+
+SELECT * FROM enchantments_function (1000, 'legacy', 'Legal', 'common', 'mythic', NULL, array[['B'], ['G'], ['U'], ['W'], ['R']], NULL, 'Exclude', NULL, NULL,
+	NULL, array[['Aura'], ['Elemental'], ['Elf'], ['Faerie'], ['Giant'], ['Goblin'], ['Kithkin'], ['Merfolk'], ['Saga'], ['Shrine']],
+	NULL, array[['Legendary'],['Snow'], ['World']]);
+
+-- Default
+
+SELECT * FROM enchantments_function (1000, 'legacy', 'Legal', 'common', 'mythic', NULL, array[['B'], ['G'], ['U'], ['W'], ['R']], NULL, 'Exclude', NULL, NULL,
+	NULL, array[['Aura'], ['Elemental'], ['Elf'], ['Faerie'], ['Giant'], ['Goblin'], ['Kithkin'], ['Merfolk'], ['Saga'], ['Shrine']],
+	NULL, NULL);
+
+-- Excludes non-null supertypes
+
+SELECT * FROM enchantments_function (1000, 'legacy', 'Legal', 'common', 'mythic', NULL, array[['B'], ['G'], ['U'], ['W'], ['R']], NULL, 'Exclude', NULL, NULL,
+	NULL, array[['Aura'], ['Elemental'], ['Elf'], ['Faerie'], ['Giant'], ['Goblin'], ['Kithkin'], ['Merfolk'], ['Saga'], ['Shrine']],
+	'Include', array[['Legendary'],['Snow'], ['World']]);
+
+-- Excludes null supertypes
 
 
 -- Query Type, Subtypes, Supertypes
