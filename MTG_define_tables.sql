@@ -2,7 +2,7 @@ CREATE SCHEMA "MTG_SCHEMA";
 
 SET search_path TO "MTG_SCHEMA", public;
 
-****
+-------
 
 CREATE TYPE "MTG_SCHEMA".em_typesets AS ENUM ('core', 'expansion', 'masters', 'memorabilia', 'starter', 'archenemy', 'box', 'draft_innovation', 'commander', 'funny', 'duel_deck', 'from_the_vault', 'masterpiece', 'promo', 'premium_deck', 'planechase', 'token', 'vanguard', 'treasure_chest', 'spellbook');
 
@@ -32,7 +32,7 @@ CREATE TABLE "MTG_SCHEMA".sets (
 	);
 
 
- **********
+-------
 
 
 CREATE TYPE "MTG_SCHEMA".em_border AS ENUM ('black', 'white', 'borderless', 'silver', 'gold');
@@ -43,7 +43,7 @@ CREATE TYPE "MTG_SCHEMA".em_frame_version AS ENUM ('2003', '1993', '2015', '1997
 
 CREATE TYPE "MTG_SCHEMA".em_layout AS ENUM ('normal', 'aftermath', 'split', 'flip', 'leveler', 'saga', 'vanguard', 'transform', 'adventure', 'meld', 'scheme', 'planar', 'host', 'augment');
 
-CREATE TYPE "MTG_SCHEMA".em_rarity AS ENUM ('rare', 'uncommon', 'common', 'mythic');
+CREATE TYPE "MTG_SCHEMA".em_rarity AS ENUM ('common', 'uncommon', 'rare', 'mythic');
 
 CREATE TABLE "MTG_SCHEMA".cards (
 	"index" INTEGER,
@@ -120,7 +120,7 @@ CREATE TABLE "MTG_SCHEMA".cards (
     variations TEXT, 
     watermark TEXT);
 
-*****
+------
 
 CREATE TYPE "MTG_SCHEMA".em_border_tokens AS ENUM ('black', 'silver', 'gold');
 
@@ -156,7 +156,7 @@ CREATE TABLE "MTG_SCHEMA".tokens (
 ); 
 
 
-****
+-----
 
 CREATE TYPE "MTG_SCHEMA".em_type AS ENUM ('mtgo', 'mtgoFoil', 'paper', 'paperFoil');
 
@@ -171,7 +171,7 @@ CREATE TABLE "MTG_SCHEMA".prices (
 
 
 
-*****
+------
 
 CREATE TABLE "MTG_SCHEMA".rulings (
     "index" INTEGER,
@@ -182,7 +182,7 @@ CREATE TABLE "MTG_SCHEMA".rulings (
 );
 
 
-******
+-----
 
 CREATE TYPE "MTG_SCHEMA".em_format AS ENUM ('commander', 'duel', 'legacy', 'modern', 'vintage', 'pauper', 'penny', 'historic', 'pioneer', 'brawl', 'future', 'standard', 'oldschool');
     
@@ -196,7 +196,7 @@ CREATE TABLE "MTG_SCHEMA".legalities (
     uuid CHAR(36) NOT NULL REFERENCES "MTG_SCHEMA".cards(uuid) ON DELETE CASCADE
 );
 
-****
+------
 
 CREATE TYPE "MTG_SCHEMA".em_language AS ENUM ('German', 'Spanish', 'French', 'Italian', 'Japanese', 'Portuguese (Brazil)', 'Russian', 'Chinese Simplified', 'Korean', 'Chinese Traditional', 'Sanskrit', 'Hebrew', 'Ancient Greek', 'Latin', 'Arabic', 'English');
 
@@ -213,7 +213,7 @@ CREATE TABLE "MTG_SCHEMA".foreign_data (
 );
 
 
-******
+--------
 
 CREATE TYPE "MTG_SCHEMA".em_translations AS ENUM ('Chinese Simplified', 'Chinese Traditional', 'French', 'German', 'Italian', 'Japanese', 'Korean', 'Portuguese (Brazil)', 'Russian', 'Spanish', 'English');
 
